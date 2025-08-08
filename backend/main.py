@@ -9,8 +9,6 @@ import os
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-print(f"CORS allowed origins: {settings.ALLOWED_ORIGINS}")
-
 app = FastAPI(
     title="TodoShare API",
     description="A collaborative todo list application API",
@@ -19,30 +17,25 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
-# CORS configuration
-cors_origins = os.getenv("CORS_ORIGINS", "*").split(",")
-if "*" in cors_origins:
-    # If wildcard, use it alone
-    cors_origins = ["*"]
+# Get CORS origins from environment variable
+cors_origins = os.getenv("CORS_ORIGINS", "*")
+if cors_origins == "*":
+    allowed_origins = ["*"]
 else:
-    # Add common origins
-    cors_origins.extend([
-        "http://localhost:3000",
-        "http://localhost:3001",
-        "https://todoshare-app.vercel.app"
-    ])
+    # Split by comma and strip whitespace
+    allowed_origins = [origin.strip() for origin in cors_origins.split(",")]
+    # Add localhost for development
+    allowed_origins.extend(["http://localhost:3000", "http://localhost:3001"])
 
-logger.info(f"CORS origins configured: {cors_origins}")
+logger.info(f"CORS allowed origins: {allowed_origins}")
 
-# CORS middleware
+# Configure CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=cors_origins,
+    allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["*"],
-    max_age=3600
 )
 
 # Include routers
@@ -58,10 +51,6 @@ async def root():
 async def health_check():
     return {"status": "healthy"}
 
-@app.options("/{rest_of_path:path}")
-async def preflight_handler(rest_of_path: str):
-    """Handle CORS preflight requests"""
-    return {"message": "OK"}
 
 if __name__ == "__main__":
     import uvicorn
