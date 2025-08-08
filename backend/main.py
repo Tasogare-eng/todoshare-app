@@ -1,5 +1,6 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.responses import Response
 from app.core.config import settings
 from app.routes import auth, todos, categories
 import logging
@@ -18,12 +19,14 @@ app = FastAPI(
 )
 
 # Get CORS origins from environment variable
-cors_origins = os.getenv("CORS_ORIGINS", "*")
-if cors_origins == "*":
+cors_origins_env = os.getenv("CORS_ORIGINS", "*")
+logger.info(f"CORS_ORIGINS env var: {cors_origins_env}")
+
+if cors_origins_env == "*":
     allowed_origins = ["*"]
 else:
-    # Split by comma and strip whitespace
-    allowed_origins = [origin.strip() for origin in cors_origins.split(",")]
+    # Split by comma and strip whitespace, removing trailing slashes
+    allowed_origins = [origin.strip().rstrip("/") for origin in cors_origins_env.split(",")]
     # Add localhost for development
     allowed_origins.extend(["http://localhost:3000", "http://localhost:3001"])
 
@@ -37,6 +40,22 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Add custom middleware to ensure CORS headers are always present
+@app.middleware("http")
+async def add_cors_header(request: Request, call_next):
+    origin = request.headers.get("origin")
+    response = await call_next(request)
+    
+    # If origin is present and in allowed list, add CORS headers
+    if origin:
+        if "*" in allowed_origins or origin.rstrip("/") in [o.rstrip("/") for o in allowed_origins]:
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+            response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS, PATCH"
+            response.headers["Access-Control-Allow-Headers"] = "*"
+    
+    return response
 
 # Include routers
 app.include_router(auth.router, prefix="/api/auth", tags=["authentication"])
