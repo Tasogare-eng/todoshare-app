@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-@router.post("/", response_model=TodoResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=TodoResponse, status_code=status.HTTP_201_CREATED)
 async def create_todo(
     todo_data: TodoCreate,
     current_user: UserResponse = Depends(get_current_active_user)
@@ -33,7 +33,7 @@ async def create_todo(
             detail="Internal server error"
         )
 
-@router.get("/", response_model=TodoListResponse)
+@router.get("", response_model=TodoListResponse)
 async def get_todos(
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
