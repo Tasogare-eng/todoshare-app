@@ -16,6 +16,12 @@
 
         <!-- Navigation Links & Auth -->
         <div class="flex items-center space-x-4">
+          <!-- Debug info (temporary) -->
+          <div class="text-xs text-gray-400">
+            Auth: {{ authStore.isAuthenticated ? 'Yes' : 'No' }} | 
+            Token: {{ authStore.token ? 'Yes' : 'No' }} | 
+            User: {{ authStore.user?.username || 'None' }}
+          </div>
           <div v-if="authStore.isAuthenticated" class="flex items-center space-x-4">
             <!-- Navigation Links for authenticated users -->
             <div class="hidden md:flex items-center space-x-6">
