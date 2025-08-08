@@ -39,15 +39,17 @@ CORS_ORIGINS=*
 
 ### 3. Deploy Frontend (Vue 3)
 1. Add another service to the same project
-2. Configure the frontend service:
+2. Select "GitHub Repo" → your repository  
+3. Configure the frontend service:
    - **Root Directory**: `/frontend`
-   - **Build Command**: `npm install && npm run build`
-   - **Start Command**: `npm run preview`
+   - **Uses Dockerfile**: Yes (automatic detection)
 
 #### Frontend Environment Variables
+Add these in Railway frontend service settings:
 ```
-VITE_API_BASE_URL=https://your-backend-service-url.railway.app
+VITE_API_BASE_URL=https://todoshare-app-production.up.railway.app/api
 ```
+Replace `todoshare-app-production.up.railway.app` with your actual backend URL.
 
 ### 4. Alternative: Single Service Deployment
 
