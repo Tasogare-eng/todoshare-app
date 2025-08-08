@@ -28,7 +28,19 @@ export const useAuthStore = defineStore('auth', () => {
 
       return true
     } catch (err: any) {
-      error.value = err.response?.data?.detail || 'Login failed'
+      console.error('Login error:', err)
+      // Extract error message from various possible formats
+      if (err.response?.data?.detail) {
+        error.value = err.response.data.detail
+      } else if (err.response?.status === 401) {
+        error.value = 'Invalid email or password. Please try again.'
+      } else if (err.response?.status === 422) {
+        error.value = 'Please check your email and password format.'
+      } else if (err.message) {
+        error.value = err.message
+      } else {
+        error.value = 'Login failed. Please try again.'
+      }
       return false
     } finally {
       loading.value = false
