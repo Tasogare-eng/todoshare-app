@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+backend/.venv/
+backend/__pycache__/
+backend/*.pyc
+
+# Build outputs
+frontend/dist/
+backend/.pytest_cache/
+
+# Environment variables
+.env
+.env.local
+.env.production
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+frontend/vite.log
+frontend/vite.pid
+
+# Coverage
+coverage/
+.coverage
+
+# Python specific
+*.egg-info/
+build/
+dist/
+EOF < /dev/null
