@@ -14,9 +14,12 @@ const mockTodo = {
   categories: [
     {
       id: 'cat1',
+      user_id: 'user1',
       name: 'Work',
       color: '#007bff',
-      description: 'Work tasks'
+      description: 'Work tasks',
+      created_at: '2024-01-01T00:00:00Z',
+      todo_count: 1
     }
   ]
 }

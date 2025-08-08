@@ -85,7 +85,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useTodosStore } from '@/stores/todos'
-import { useAuthStore } from '@/stores/auth'
 import TodoList from '@/components/TodoList.vue'
 import TodoForm from '@/components/TodoForm.vue'
 import SearchBar from '@/components/SearchBar.vue'
