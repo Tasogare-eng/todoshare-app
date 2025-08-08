@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.routes import auth, todos, categories
 import logging
+import os
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -18,13 +19,30 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
+# CORS configuration
+cors_origins = os.getenv("CORS_ORIGINS", "*").split(",")
+if "*" in cors_origins:
+    # If wildcard, use it alone
+    cors_origins = ["*"]
+else:
+    # Add common origins
+    cors_origins.extend([
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "https://todoshare-app.vercel.app"
+    ])
+
+logger.info(f"CORS origins configured: {cors_origins}")
+
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins for development
+    allow_origins=cors_origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],
+    expose_headers=["*"],
+    max_age=3600
 )
 
 # Include routers
@@ -39,6 +57,11 @@ async def root():
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
+
+@app.options("/{rest_of_path:path}")
+async def preflight_handler(rest_of_path: str):
+    """Handle CORS preflight requests"""
+    return {"message": "OK"}
 
 if __name__ == "__main__":
     import uvicorn
