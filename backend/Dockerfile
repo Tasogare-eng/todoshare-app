@@ -20,5 +20,8 @@ COPY . .
 # Expose port
 EXPOSE 8000
 
-# Start the application
-CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+# Set Python path
+ENV PYTHONPATH=/app
+
+# Start the application  
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
