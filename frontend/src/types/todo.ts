@@ -9,6 +9,8 @@ export enum TodoPriority {
   HIGH = 'high'
 }
 
+import type { Category } from './category'
+
 export interface Todo {
   id: string
   user_id: string
@@ -21,13 +23,6 @@ export interface Todo {
   updated_at?: string
   category_ids?: string[]
   categories?: Category[]
-}
-
-interface Category {
-  id: string
-  name: string
-  color: string
-  description?: string
 }
 
 export interface TodoCreate {

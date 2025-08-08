@@ -90,7 +90,7 @@ import { storeToRefs } from 'pinia'
 import { useCategoriesStore } from '@/stores/categories'
 import CategoryBadge from './CategoryBadge.vue'
 import CategoryForm from './CategoryForm.vue'
-import type { Category, CategoryCreate } from '@/types/category'
+import type { Category, CategoryCreate, CategoryUpdate } from '@/types/category'
 
 interface Props {
   selectedCategoryIds?: string[]
@@ -158,7 +158,7 @@ const handleCreateCategory = async (data: CategoryCreate | CategoryUpdate) => {
   if (!('name' in data) || !data.name) {
     return
   }
-  const result = await categoriesStore.createCategory(data)
+  const result = await categoriesStore.createCategory(data as CategoryCreate)
   if (result) {
     showCreateForm.value = false
     // Automatically add the new category to selection

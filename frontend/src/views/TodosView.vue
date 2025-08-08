@@ -84,16 +84,14 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
-import { storeToRefs } from 'pinia'
 import { useTodosStore } from '@/stores/todos'
 import { useAuthStore } from '@/stores/auth'
 import TodoList from '@/components/TodoList.vue'
 import TodoForm from '@/components/TodoForm.vue'
 import SearchBar from '@/components/SearchBar.vue'
 import FilterPanel from '@/components/FilterPanel.vue'
-import type { TodoCreate } from '@/types/todo'
+import type { TodoCreate, TodoUpdate } from '@/types/todo'
 
-const authStore = useAuthStore()
 const todosStore = useTodosStore()
 
 const showCreateForm = ref(false)
@@ -103,7 +101,7 @@ const handleCreateTodo = async (data: TodoCreate | TodoUpdate) => {
   if (!('title' in data) || !data.title) {
     return
   }
-  const result = await todosStore.createTodo(data)
+  const result = await todosStore.createTodo(data as TodoCreate)
   if (result) {
     showCreateForm.value = false
   }
