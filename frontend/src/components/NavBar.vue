@@ -81,9 +81,18 @@ const toggleUserMenu = () => {
 }
 
 const handleLogout = async () => {
-  await authStore.logout()
-  showUserMenu.value = false
-  router.push('/login')
+  try {
+    await authStore.logout()
+    showUserMenu.value = false
+    // Redirect to home page instead of login to avoid loop
+    router.push('/')
+  } catch (error) {
+    console.error('Logout failed:', error)
+    // Force logout even if API fails
+    authStore.logout()
+    showUserMenu.value = false
+    router.push('/')
+  }
 }
 
 // Close user menu when clicking outside

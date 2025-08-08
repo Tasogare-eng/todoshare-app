@@ -71,16 +71,23 @@ export const useAuthStore = defineStore('auth', () => {
 
   const logout = async () => {
     try {
+      // Call logout API if token exists
       if (token.value) {
-        await authApi.logout()
+        try {
+          await authApi.logout()
+        } catch (err) {
+          // Ignore API errors during logout - server may already have invalidated the token
+          console.warn('Logout API call failed (this is usually not a problem):', err)
+        }
       }
-    } catch (err) {
-      console.error('Logout error:', err)
     } finally {
-      // Clear local state regardless of API call success
+      // Always clear local state regardless of API call success
       token.value = ''
       user.value = null
       error.value = null
+      
+      // Clear from localStorage as well
+      localStorage.removeItem('auth-token')
     }
   }
 
