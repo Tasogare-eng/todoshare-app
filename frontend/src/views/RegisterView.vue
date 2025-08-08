@@ -89,7 +89,7 @@
           <!-- Submit Button -->
           <button
             type="submit"
-            :disabled="authStore.loading || validationError"
+            :disabled="authStore.loading || !!validationError"
             class="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold text-lg py-3 px-4 rounded-lg transition-colors"
           >
             <svg v-if="authStore.loading" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">

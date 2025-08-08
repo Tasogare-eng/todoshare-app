@@ -153,7 +153,11 @@ const removeCategory = (categoryId: string) => {
   emit('change', categoriesStore.getCategoriesByIds(newCategoryIds))
 }
 
-const handleCreateCategory = async (data: CategoryCreate) => {
+const handleCreateCategory = async (data: CategoryCreate | CategoryUpdate) => {
+  // Type guard to ensure we have required fields for creation
+  if (!('name' in data) || !data.name) {
+    return
+  }
   const result = await categoriesStore.createCategory(data)
   if (result) {
     showCreateForm.value = false

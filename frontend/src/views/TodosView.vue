@@ -98,7 +98,11 @@ const todosStore = useTodosStore()
 
 const showCreateForm = ref(false)
 
-const handleCreateTodo = async (data: TodoCreate) => {
+const handleCreateTodo = async (data: TodoCreate | TodoUpdate) => {
+  // Type guard to ensure we have required fields for creation
+  if (!('title' in data) || !data.title) {
+    return
+  }
   const result = await todosStore.createTodo(data)
   if (result) {
     showCreateForm.value = false

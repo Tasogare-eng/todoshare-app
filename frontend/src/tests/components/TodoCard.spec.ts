@@ -46,7 +46,7 @@ describe('TodoCard', () => {
     })
 
     expect(wrapper.find('.todo-card').classes()).toContain('completed')
-    expect(wrapper.find('input[type="checkbox"]').element.checked).toBe(true)
+    expect((wrapper.find('input[type="checkbox"]').element as HTMLInputElement).checked).toBe(true)
   })
 
   it('emits toggle event when checkbox is clicked', async () => {
