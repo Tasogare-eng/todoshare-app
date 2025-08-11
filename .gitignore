@@ -13,6 +13,12 @@ backend/.pytest_cache/
 .env.local
 .env.production
 
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+todoShare.db
+
 # IDE
 .vscode/
 .idea/
