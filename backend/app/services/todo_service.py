@@ -1,5 +1,8 @@
 from typing import Optional, List, Dict, Any
+from sqlalchemy.orm import Session
+from sqlalchemy import desc, asc, or_
 from app.models.todo import TodoCreate, TodoUpdate, TodoResponse, TodoInDB, TodoStatus
+from app.models.db_models import Todo, Category
 from datetime import datetime
 import uuid
 import logging
@@ -7,41 +10,52 @@ import math
 
 logger = logging.getLogger(__name__)
 
-# In-memory storage for development
-mock_todos: Dict[str, TodoInDB] = {}
-
 class TodoService:
     def __init__(self):
-        # Using mock storage only - no external database
         pass
     
-    async def create_todo(self, user_id: str, todo_data: TodoCreate) -> Optional[TodoResponse]:
+    async def create_todo(self, user_id: str, todo_data: TodoCreate, db: Session) -> Optional[TodoResponse]:
         """Create a new todo"""
         try:
-            todo_id = str(uuid.uuid4())
-            now = datetime.utcnow()
+            # Convert status to completed boolean for database
+            completed = todo_data.status == TodoStatus.completed if todo_data.status else False
             
-            todo = TodoInDB(
-                id=todo_id,
-                user_id=user_id,
+            db_todo = Todo(
                 title=todo_data.title,
                 description=todo_data.description,
-                status=todo_data.status,
+                completed=completed,
                 priority=todo_data.priority,
                 due_date=todo_data.due_date,
-                created_at=now,
-                updated_at=None
+                user_id=user_id,
+                category_id=getattr(todo_data, 'category_id', None)
             )
-            mock_todos[todo_id] = todo
-            return TodoResponse(**todo.model_dump())
+            
+            db.add(db_todo)
+            db.commit()
+            db.refresh(db_todo)
+            
+            # Convert back to TodoResponse format
+            return TodoResponse(
+                id=db_todo.id,
+                title=db_todo.title,
+                description=db_todo.description,
+                status=TodoStatus.completed if db_todo.completed else TodoStatus.pending,
+                priority=db_todo.priority,
+                due_date=db_todo.due_date,
+                user_id=db_todo.user_id,
+                created_at=db_todo.created_at,
+                updated_at=db_todo.updated_at
+            )
             
         except Exception as e:
             logger.error(f"Error creating todo: {e}")
+            db.rollback()
             return None
     
     async def get_todos(
         self, 
         user_id: str,
+        db: Session,
         page: int = 1,
         per_page: int = 20,
         status: Optional[TodoStatus] = None,
@@ -55,69 +69,79 @@ class TodoService:
     ) -> Dict[str, Any]:
         """Get todos for a user with pagination"""
         try:
-            # Filter mock todos by user
-            user_todos = [
-                todo for todo in mock_todos.values() 
-                if todo.user_id == user_id
-            ]
+            # Start with base query
+            query = db.query(Todo).filter(Todo.user_id == user_id)
             
             # Apply filters
             if status:
-                user_todos = [
-                    todo for todo in user_todos 
-                    if todo.status == status
-                ]
+                completed = status == TodoStatus.completed
+                query = query.filter(Todo.completed == completed)
             
             if search:
-                search_lower = search.lower()
-                user_todos = [
-                    todo for todo in user_todos
-                    if search_lower in todo.title.lower() or
-                    (todo.description and search_lower in todo.description.lower())
-                ]
+                search_filter = or_(
+                    Todo.title.ilike(f"%{search}%"),
+                    Todo.description.ilike(f"%{search}%")
+                )
+                query = query.filter(search_filter)
             
             if priority:
-                user_todos = [
-                    todo for todo in user_todos
-                    if todo.priority and todo.priority.value == priority
-                ]
+                query = query.filter(Todo.priority == priority)
+            
+            if category_ids:
+                query = query.filter(Todo.category_id.in_(category_ids))
             
             # Date range filtering
-            if due_date_from or due_date_to:
-                if due_date_from:
-                    from_date = datetime.fromisoformat(due_date_from.replace('Z', '+00:00'))
-                    user_todos = [
-                        todo for todo in user_todos
-                        if todo.due_date and todo.due_date >= from_date
-                    ]
-                if due_date_to:
-                    to_date = datetime.fromisoformat(due_date_to.replace('Z', '+00:00'))
-                    user_todos = [
-                        todo for todo in user_todos
-                        if todo.due_date and todo.due_date <= to_date
-                    ]
+            if due_date_from:
+                from_date = datetime.fromisoformat(due_date_from.replace('Z', '+00:00'))
+                query = query.filter(Todo.due_date >= from_date)
             
-            # Sort todos
-            reverse = (sort_order == "desc")
+            if due_date_to:
+                to_date = datetime.fromisoformat(due_date_to.replace('Z', '+00:00'))
+                query = query.filter(Todo.due_date <= to_date)
+            
+            # Apply sorting
             if sort_by == "created_at":
-                user_todos.sort(key=lambda x: x.created_at, reverse=reverse)
+                order_func = desc if sort_order == "desc" else asc
+                query = query.order_by(order_func(Todo.created_at))
             elif sort_by == "due_date":
-                user_todos.sort(key=lambda x: x.due_date or datetime.max, reverse=reverse)
+                order_func = desc if sort_order == "desc" else asc
+                query = query.order_by(order_func(Todo.due_date))
             elif sort_by == "priority":
-                priority_order = {"high": 3, "medium": 2, "low": 1}
-                user_todos.sort(
-                    key=lambda x: priority_order.get(x.priority.value if x.priority else "medium", 2),
-                    reverse=reverse
-                )
+                # Custom priority ordering
+                priority_case = {
+                    "high": 3,
+                    "medium": 2, 
+                    "low": 1
+                }
+                if sort_order == "desc":
+                    query = query.order_by(Todo.priority.desc())
+                else:
+                    query = query.order_by(Todo.priority.asc())
             
-            # Paginate
-            total = len(user_todos)
-            start = (page - 1) * per_page
-            end = start + per_page
-            paginated_todos = user_todos[start:end]
+            # Get total count
+            total = query.count()
+            
+            # Apply pagination
+            offset = (page - 1) * per_page
+            todos = query.offset(offset).limit(per_page).all()
+            
+            # Convert to response format
+            todo_responses = []
+            for todo in todos:
+                todo_responses.append(TodoResponse(
+                    id=todo.id,
+                    title=todo.title,
+                    description=todo.description,
+                    status=TodoStatus.completed if todo.completed else TodoStatus.pending,
+                    priority=todo.priority,
+                    due_date=todo.due_date,
+                    user_id=todo.user_id,
+                    created_at=todo.created_at,
+                    updated_at=todo.updated_at
+                ))
             
             return {
-                "items": [TodoResponse(**todo.model_dump()) for todo in paginated_todos],
+                "items": todo_responses,
                 "total": total,
                 "page": page,
                 "per_page": per_page,
@@ -134,12 +158,26 @@ class TodoService:
                 "pages": 0
             }
     
-    async def get_todo_by_id(self, todo_id: str, user_id: str) -> Optional[TodoResponse]:
+    async def get_todo_by_id(self, todo_id: str, user_id: str, db: Session) -> Optional[TodoResponse]:
         """Get a specific todo by ID"""
         try:
-            todo = mock_todos.get(todo_id)
-            if todo and todo.user_id == user_id:
-                return TodoResponse(**todo.model_dump())
+            todo = db.query(Todo).filter(
+                Todo.id == todo_id,
+                Todo.user_id == user_id
+            ).first()
+            
+            if todo:
+                return TodoResponse(
+                    id=todo.id,
+                    title=todo.title,
+                    description=todo.description,
+                    status=TodoStatus.completed if todo.completed else TodoStatus.pending,
+                    priority=todo.priority,
+                    due_date=todo.due_date,
+                    user_id=todo.user_id,
+                    created_at=todo.created_at,
+                    updated_at=todo.updated_at
+                )
             return None
             
         except Exception as e:
@@ -150,54 +188,99 @@ class TodoService:
         self, 
         todo_id: str, 
         user_id: str, 
-        todo_update: TodoUpdate
+        todo_update: TodoUpdate,
+        db: Session
     ) -> Optional[TodoResponse]:
         """Update a todo"""
         try:
-            todo = mock_todos.get(todo_id)
-            if todo and todo.user_id == user_id:
-                # Update fields
-                update_data = todo_update.model_dump(exclude_unset=True)
-                for field, value in update_data.items():
-                    setattr(todo, field, value)
-                todo.updated_at = datetime.utcnow()
-                mock_todos[todo_id] = todo
-                return TodoResponse(**todo.model_dump())
-            return None
+            todo = db.query(Todo).filter(
+                Todo.id == todo_id,
+                Todo.user_id == user_id
+            ).first()
             
-        except Exception as e:
-            logger.error(f"Error updating todo: {e}")
-            return None
-    
-    async def delete_todo(self, todo_id: str, user_id: str) -> bool:
-        """Delete a todo"""
-        try:
-            if todo_id in mock_todos and mock_todos[todo_id].user_id == user_id:
-                del mock_todos[todo_id]
-                return True
-            return False
-            
-        except Exception as e:
-            logger.error(f"Error deleting todo: {e}")
-            return False
-    
-    async def toggle_todo_status(self, todo_id: str, user_id: str) -> Optional[TodoResponse]:
-        """Toggle todo status between pending and completed"""
-        try:
-            # Get the todo
-            todo = await self.get_todo_by_id(todo_id, user_id)
             if not todo:
                 return None
             
-            # Toggle status
-            new_status = TodoStatus.COMPLETED if todo.status == TodoStatus.PENDING else TodoStatus.PENDING
+            # Update fields
+            update_data = todo_update.model_dump(exclude_unset=True)
+            for field, value in update_data.items():
+                if field == "status":
+                    # Convert status to completed boolean
+                    todo.completed = (value == TodoStatus.completed)
+                else:
+                    setattr(todo, field, value)
             
-            # Update the todo
-            update_data = TodoUpdate(status=new_status)
-            return await self.update_todo(todo_id, user_id, update_data)
+            db.commit()
+            db.refresh(todo)
+            
+            return TodoResponse(
+                id=todo.id,
+                title=todo.title,
+                description=todo.description,
+                status=TodoStatus.completed if todo.completed else TodoStatus.pending,
+                priority=todo.priority,
+                due_date=todo.due_date,
+                user_id=todo.user_id,
+                created_at=todo.created_at,
+                updated_at=todo.updated_at
+            )
+            
+        except Exception as e:
+            logger.error(f"Error updating todo: {e}")
+            db.rollback()
+            return None
+    
+    async def delete_todo(self, todo_id: str, user_id: str, db: Session) -> bool:
+        """Delete a todo"""
+        try:
+            todo = db.query(Todo).filter(
+                Todo.id == todo_id,
+                Todo.user_id == user_id
+            ).first()
+            
+            if not todo:
+                return False
+            
+            db.delete(todo)
+            db.commit()
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error deleting todo: {e}")
+            db.rollback()
+            return False
+    
+    async def toggle_todo_status(self, todo_id: str, user_id: str, db: Session) -> Optional[TodoResponse]:
+        """Toggle todo status between pending and completed"""
+        try:
+            todo = db.query(Todo).filter(
+                Todo.id == todo_id,
+                Todo.user_id == user_id
+            ).first()
+            
+            if not todo:
+                return None
+            
+            # Toggle completed status
+            todo.completed = not todo.completed
+            db.commit()
+            db.refresh(todo)
+            
+            return TodoResponse(
+                id=todo.id,
+                title=todo.title,
+                description=todo.description,
+                status=TodoStatus.completed if todo.completed else TodoStatus.pending,
+                priority=todo.priority,
+                due_date=todo.due_date,
+                user_id=todo.user_id,
+                created_at=todo.created_at,
+                updated_at=todo.updated_at
+            )
             
         except Exception as e:
             logger.error(f"Error toggling todo status: {e}")
+            db.rollback()
             return None
 
 # Singleton instance

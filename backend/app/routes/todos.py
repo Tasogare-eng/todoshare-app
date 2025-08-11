@@ -1,9 +1,11 @@
 from fastapi import APIRouter, HTTPException, Depends, Query, status
 from typing import Optional
+from sqlalchemy.orm import Session
 from app.models.todo import TodoCreate, TodoUpdate, TodoResponse, TodoListResponse, TodoStatus
 from app.models.user import UserResponse
 from app.services.todo_service import todo_service
 from app.core.dependencies import get_current_active_user
+from app.core.database import get_db
 import logging
 
 logger = logging.getLogger(__name__)
@@ -13,11 +15,12 @@ router = APIRouter()
 @router.post("", response_model=TodoResponse, status_code=status.HTTP_201_CREATED)
 async def create_todo(
     todo_data: TodoCreate,
-    current_user: UserResponse = Depends(get_current_active_user)
+    current_user: UserResponse = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
 ):
     """Create a new todo"""
     try:
-        todo = await todo_service.create_todo(current_user.id, todo_data)
+        todo = await todo_service.create_todo(current_user.id, todo_data, db)
         if not todo:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -45,7 +48,8 @@ async def get_todos(
     category_ids: Optional[str] = None,
     due_date_from: Optional[str] = None,
     due_date_to: Optional[str] = None,
-    current_user: UserResponse = Depends(get_current_active_user)
+    current_user: UserResponse = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
 ):
     """Get todos for current user with pagination and filters"""
     try:
@@ -56,6 +60,7 @@ async def get_todos(
         
         result = await todo_service.get_todos(
             user_id=current_user.id,
+            db=db,
             page=page,
             per_page=per_page,
             status=status,
@@ -78,11 +83,12 @@ async def get_todos(
 @router.get("/{todo_id}", response_model=TodoResponse)
 async def get_todo(
     todo_id: str,
-    current_user: UserResponse = Depends(get_current_active_user)
+    current_user: UserResponse = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
 ):
     """Get a specific todo by ID"""
     try:
-        todo = await todo_service.get_todo_by_id(todo_id, current_user.id)
+        todo = await todo_service.get_todo_by_id(todo_id, current_user.id, db)
         if not todo:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -102,11 +108,12 @@ async def get_todo(
 async def update_todo(
     todo_id: str,
     todo_update: TodoUpdate,
-    current_user: UserResponse = Depends(get_current_active_user)
+    current_user: UserResponse = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
 ):
     """Update a todo"""
     try:
-        todo = await todo_service.update_todo(todo_id, current_user.id, todo_update)
+        todo = await todo_service.update_todo(todo_id, current_user.id, todo_update, db)
         if not todo:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -125,11 +132,12 @@ async def update_todo(
 @router.delete("/{todo_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_todo(
     todo_id: str,
-    current_user: UserResponse = Depends(get_current_active_user)
+    current_user: UserResponse = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
 ):
     """Delete a todo"""
     try:
-        success = await todo_service.delete_todo(todo_id, current_user.id)
+        success = await todo_service.delete_todo(todo_id, current_user.id, db)
         if not success:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -148,11 +156,12 @@ async def delete_todo(
 @router.patch("/{todo_id}/toggle", response_model=TodoResponse)
 async def toggle_todo_status(
     todo_id: str,
-    current_user: UserResponse = Depends(get_current_active_user)
+    current_user: UserResponse = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
 ):
     """Toggle todo status between pending and completed"""
     try:
-        todo = await todo_service.toggle_todo_status(todo_id, current_user.id)
+        todo = await todo_service.toggle_todo_status(todo_id, current_user.id, db)
         if not todo:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,

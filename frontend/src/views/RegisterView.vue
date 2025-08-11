@@ -48,16 +48,32 @@
 
           <div>
             <label for="password" class="block text-sm font-medium text-gray-700 mb-2">Password</label>
-            <input
-              id="password"
-              v-model="form.password"
-              type="password"
-              required
-              :disabled="authStore.loading"
-              placeholder="Enter your password (min 8 characters)"
-              class="input"
-              :class="{ 'border-red-300 focus:ring-red-500 focus:border-red-500': validationError }"
-            />
+            <div class="relative">
+              <input
+                id="password"
+                v-model="form.password"
+                :type="showPassword ? 'text' : 'password'"
+                required
+                :disabled="authStore.loading"
+                placeholder="Enter your password (min 8 characters)"
+                class="input"
+                :class="{ 'border-red-300 focus:ring-red-500 focus:border-red-500': validationError }"
+              />
+              <button
+                type="button"
+                @click="showPassword = !showPassword"
+                class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                :disabled="authStore.loading"
+              >
+                <svg v-if="showPassword" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21"/>
+                </svg>
+                <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                </svg>
+              </button>
+            </div>
             <p class="mt-2 text-sm text-gray-500">
               Password must contain uppercase, lowercase and numbers
             </p>
@@ -65,16 +81,32 @@
 
           <div>
             <label for="confirmPassword" class="block text-sm font-medium text-gray-700 mb-2">Confirm Password</label>
-            <input
-              id="confirmPassword"
-              v-model="form.confirmPassword"
-              type="password"
-              required
-              :disabled="authStore.loading"
-              placeholder="Confirm your password"
-              class="input"
-              :class="{ 'border-red-300 focus:ring-red-500 focus:border-red-500': validationError }"
-            />
+            <div class="relative">
+              <input
+                id="confirmPassword"
+                v-model="form.confirmPassword"
+                :type="showConfirmPassword ? 'text' : 'password'"
+                required
+                :disabled="authStore.loading"
+                placeholder="Confirm your password"
+                class="input"
+                :class="{ 'border-red-300 focus:ring-red-500 focus:border-red-500': validationError }"
+              />
+              <button
+                type="button"
+                @click="showConfirmPassword = !showConfirmPassword"
+                class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                :disabled="authStore.loading"
+              >
+                <svg v-if="showConfirmPassword" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21"/>
+                </svg>
+                <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                </svg>
+              </button>
+            </div>
           </div>
 
           <!-- Error Messages -->
@@ -138,6 +170,9 @@ const form = ref({
   password: '',
   confirmPassword: ''
 })
+
+const showPassword = ref(false)
+const showConfirmPassword = ref(false)
 
 const validationError = computed(() => {
   if (form.value.password && form.value.confirmPassword) {

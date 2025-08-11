@@ -16,12 +16,6 @@
 
         <!-- Navigation Links & Auth -->
         <div class="flex items-center space-x-4">
-          <!-- Debug info (temporary) -->
-          <div class="text-xs text-gray-400">
-            Auth: {{ authStore.isAuthenticated ? 'Yes' : 'No' }} | 
-            Token: {{ authStore.token ? 'Yes' : 'No' }} | 
-            User: {{ authStore.user?.username || 'None' }}
-          </div>
           <div v-if="authStore.isAuthenticated" class="flex items-center space-x-4">
             <!-- Navigation Links for authenticated users -->
             <div class="hidden md:flex items-center space-x-6">
@@ -30,12 +24,12 @@
             </div>
             
             <!-- User Menu -->
-            <div class="relative">
+            <div class="relative user-menu">
               <button 
                 @click="toggleUserMenu" 
-                class="flex items-center space-x-2 text-gray-600 hover:text-gray-900 text-sm font-medium px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors"
+                class="flex items-center space-x-2 text-gray-600 hover:text-gray-900 text-sm font-medium px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors z-50 relative"
               >
-                <span>{{ authStore.user?.username }}</span>
+                <span>{{ authStore.user?.username || 'User' }}</span>
                 <svg class="w-4 h-4 transition-transform" :class="{ 'rotate-180': showUserMenu }" fill="currentColor" viewBox="0 0 20 20">
                   <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
                 </svg>
@@ -44,8 +38,8 @@
               <!-- Dropdown Menu -->
               <div v-if="showUserMenu" class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2">
                 <div class="px-4 py-2 border-b border-gray-200">
-                  <p class="text-sm font-medium text-gray-900">{{ authStore.user?.username }}</p>
-                  <p class="text-sm text-gray-500">{{ authStore.user?.email }}</p>
+                  <p class="text-sm font-medium text-gray-900">{{ authStore.user?.username || 'User' }}</p>
+                  <p class="text-sm text-gray-500">{{ authStore.user?.email || 'Loading...' }}</p>
                 </div>
                 <button 
                   @click="handleLogout" 
@@ -83,7 +77,9 @@ const authStore = useAuthStore()
 const showUserMenu = ref(false)
 
 const toggleUserMenu = () => {
+  console.log('Toggle user menu clicked, current state:', showUserMenu.value)
   showUserMenu.value = !showUserMenu.value
+  console.log('New state:', showUserMenu.value)
 }
 
 const handleLogout = async () => {

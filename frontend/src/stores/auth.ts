@@ -11,7 +11,7 @@ export const useAuthStore = defineStore('auth', () => {
   const error = ref<string | null>(null)
 
   // Getters
-  const isAuthenticated = computed(() => !!token.value && !!user.value)
+  const isAuthenticated = computed(() => !!token.value)
   const isLoading = computed(() => loading.value)
 
   // Actions
@@ -86,8 +86,8 @@ export const useAuthStore = defineStore('auth', () => {
       user.value = null
       error.value = null
       
-      // Clear from localStorage as well
-      localStorage.removeItem('auth-token')
+      // Clear from localStorage as well (useLocalStorage handles this automatically, but being explicit)
+      localStorage.removeItem('auth_token')
     }
   }
 
@@ -125,10 +125,44 @@ export const useAuthStore = defineStore('auth', () => {
     error.value = null
   }
 
+  const setError = (message: string) => {
+    error.value = message
+  }
+
+  const googleLogin = async (idToken: string) => {
+    try {
+      loading.value = true
+      error.value = null
+
+      const response = await authApi.googleLogin(idToken)
+      token.value = response.access_token
+
+      // Get user info after login
+      await getCurrentUser()
+
+      return true
+    } catch (err: any) {
+      console.error('Google login error:', err)
+      if (err.response?.data?.detail) {
+        error.value = err.response.data.detail
+      } else {
+        error.value = 'Google login failed. Please try again.'
+      }
+      return false
+    } finally {
+      loading.value = false
+    }
+  }
+
   // Initialize user if token exists
   const initializeAuth = async () => {
     if (token.value) {
-      await getCurrentUser()
+      const userInfo = await getCurrentUser()
+      if (!userInfo) {
+        // Token is invalid, clear it
+        token.value = ''
+        user.value = null
+      }
     }
   }
 
@@ -149,6 +183,8 @@ export const useAuthStore = defineStore('auth', () => {
     getCurrentUser,
     refreshToken,
     clearError,
+    setError,
+    googleLogin,
     initializeAuth
   }
 })

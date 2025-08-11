@@ -40,6 +40,26 @@ def get_mock_user_by_id(user_id: str) -> Optional[UserInDB]:
             return user
     return None
 
+def create_mock_google_user(email: str, username: str, google_id: str, picture: str = "") -> UserInDB:
+    """Create a mock user from Google OAuth for development"""
+    user_id = str(uuid.uuid4())
+    # For Google users, we don't have a password, so use a placeholder hash
+    hashed_password = "google_oauth_user"
+    now = datetime.utcnow()
+    
+    user = UserInDB(
+        id=user_id,
+        email=email,
+        username=username,
+        hashed_password=hashed_password,
+        created_at=now,
+        is_active=True
+    )
+    
+    # Store in mock database
+    mock_users[email] = user
+    return user
+
 def clear_mock_users() -> None:
     """Clear all mock users (for development/testing)"""
     mock_users.clear()

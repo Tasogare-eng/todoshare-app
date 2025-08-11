@@ -2,6 +2,9 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.responses import Response
 from app.core.config import settings
+from app.core.database import init_db
+# Import models to register them with SQLAlchemy
+from app.models import db_models
 from app.routes import auth, todos, categories
 import logging
 import os
@@ -17,6 +20,13 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc"
 )
+
+# Initialize database
+@app.on_event("startup")
+async def startup_event():
+    logger.info("Initializing database...")
+    init_db()
+    logger.info("Database initialization completed")
 
 # Get CORS origins from environment variable
 cors_origins_env = os.getenv("CORS_ORIGINS", "*")

@@ -39,3 +39,12 @@ class Token(BaseModel):
 class TokenData(BaseModel):
     user_id: Optional[str] = None
     email: Optional[str] = None
+
+class GoogleLoginRequest(BaseModel):
+    id_token: str
+
+class UserCreateFromGoogle(BaseModel):
+    email: EmailStr
+    username: str
+    google_id: str
+    picture: Optional[str] = None
